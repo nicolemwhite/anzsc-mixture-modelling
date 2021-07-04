@@ -7,7 +7,7 @@ m2 = 34
 s2 = 4
 
 n = 10000
-eta = 0.3
+eta = 0.6
 
 z = sample(1:2,size=n,prob=c(eta,1-eta),replace=T)
 
