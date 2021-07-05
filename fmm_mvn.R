@@ -13,7 +13,7 @@ y<-as.matrix(dat.pca)
 r<-dim(y)[1]
 n<-dim(y)[2]
 
-#set hyperparameters
+#set hyperparameters; data-driven
 hypers<-list(b0=apply(y,1,mean),N0=1,c0=r+1,C0=0.75*cov(t(y)))
 
 
@@ -33,7 +33,7 @@ for(k in 1:K){Sigma[,,k]<-with(hypers,riwish(c0,C0))}
 
 
 #set up MCMC information
-MCMC<-list(niter=100,thin=1,counter=1)
+MCMC<-list(niter=5000,thin=5,counter=1)
 MCMC.traces<-list(z=array(0,c(n,MCMC$niter/MCMC$thin)),eta=array(0,c(K,MCMC$niter/MCMC$thin)),mu=array(0,c(r,K,MCMC$niter/MCMC$thin)))
 
 #set up progress bar
@@ -79,7 +79,7 @@ for (t in 1:MCMC$niter){
     setWinProgressBar(pb,100*t/MCMC$niter,label=info)
     pbc<-pbc+1}
 }
-
+close(pb)
 #save traces
 save(MCMC.traces,file='fmm_spikesorting_output.rda')
 
@@ -88,12 +88,10 @@ save(MCMC.traces,file='fmm_spikesorting_output.rda')
 ##apply prior constraint on eta: only accept draws where eta1<...<etaK
 ## e.g mu[1,1:K]
 eta.post <- mu.post <- rep(0,K)
-for (t in 1:MCMC$niter){
+for (t in 1:(MCMC$niter/MCMC$thin)){
   eta_order = order(MCMC.traces$eta[,t])
-  if (sum(eta_order==1:K)==K){
-    eta.post = rbind(eta.post,MCMC.traces$eta[,t])
-    mu.post = rbind(mu.post,MCMC.traces$mu[1,,t])
-  }
+    eta.post = rbind(eta.post,MCMC.traces$eta[eta_order,t])
+    mu.post = rbind(mu.post,MCMC.traces$mu[1,eta_order,t])
 }
 
 ## apply Stephens' relabelling algorithm
@@ -107,13 +105,12 @@ z.sim = comp.psm(t(MCMC.traces$z))
 #reorder for heatmap
 tmp<-hclust(dist(z.sim))
 z.sim_reorder<-z.sim[tmp$order,tmp$order]
-z.sim_long <- reshape2::melt(z.sim_reorder,varnames = c('z1','z2'))
-ggplot(z.sim_long,aes(x=z1,y=z2,fill=value))+
-  geom_raster()+xlab('')+ylab('')+
-  scale_fill_continuous(low='#CCCCCC',high='#333333')+
-  scale_x_discrete(expand = c(0, 0)) +scale_y_discrete(expand = c(0, 0)) +
-  theme_grey()+theme(legend.title = element_blank(),legend.position='none',plot.title = element_text(hjust = 0.5,size=14),text=element_text(size=14))
+z.sim_long <- reshape2::melt(z.sim_reorder,varnames = c('z1','z2'),value.name='Probability')
 
+#plot
+ggplot(z.sim_long,aes(x=z1,y=z2,fill=Probability))+
+  geom_raster()+scale_x_continuous('Observation index',breaks=seq(0,350,25))+
+  scale_y_continuous('Observation index',breaks=seq(0,350,25))
 
-image(1:n,1:n,z.sim[order(y[1,]),order(y[1,])],col=grey.colors(25))
-
+ggsave("figures/fmm.postsim.spikes.png", width = 25, height = 20, units = "cm")
+invisible(dev.off())
