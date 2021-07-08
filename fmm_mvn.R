@@ -41,7 +41,7 @@ for(k in 1:K){Sigma[,,k]<-with(hypers,riwish(c0,C0))}
 
 
 #set up MCMC information
-MCMC<-list(niter=500,thin=1,counter=1)
+MCMC<-list(niter=2000,thin=1,counter=1)
 MCMC.traces<-list(z=array(0,c(n,MCMC$niter/MCMC$thin)),eta=array(0,c(K,MCMC$niter/MCMC$thin)),mu=array(0,c(r,K,MCMC$niter/MCMC$thin)))
 
 #set up progress bar
@@ -89,4 +89,4 @@ for (t in 1:MCMC$niter){
 }
 close(pb)
 #save traces
-save(MCMC.traces,file='fmm_spikesorting_output.rda')
+save(MCMC.traces,file='mcmc output/fmm_mvn_MCMCoutput.rda')
